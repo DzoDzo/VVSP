@@ -1,6 +1,8 @@
 import random
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.cm as cm
+import matplotlib.patches as mpatches
 
 def randomwalk(p,q,n):
     dir=[]
@@ -12,25 +14,15 @@ def randomwalk(p,q,n):
     rw=np.cumsum(dir)
     np.insert(rw,0,0)
     return range(n),rw
-def makeContinues(time,dirs,steps):
-    #mu vrakjat, vrednost na Sn, i vreme
-    time=np.array(time)*(1/len(time))
-
-    Sn=np.cumsum(dirs)
-    np.insert(Sn,0,0)
-    print(len(Sn),len(time)) #tuka so zgolemuvanje na N, disperzijata nogo jako raste
-    plt.scatter(time,Sn)
-    plt.show()
-    #do tuka e samo skalirano vremeto
-    print(time)
-    scaled_dirs=dirs*(1/np.sqrt(len(time)))
-    Snt=np.cumsum(scaled_dirs)
-    np.insert(Snt,0,0)
-    plt.scatter(time, Snt,color='r',s=1)
-    plt.show()
-
-    #sakame da ima poveche tochki
-    continues=[]
+def ScaledWalk(time,steps):
+    dir = []
+    k=(1/np.sqrt(steps))
+    dirs = [-1*k, k]
+    for i in range(time*steps):
+        dir.append(random.choices(dirs)[0])
+    sw = np.cumsum(dir)
+    np.insert(sw, 0, 0)
+    return np.array(list(range(steps))), sw
 def Wiener(T,N,seed):
     if seed is not None:
         np.random.seed(seed)
@@ -43,27 +35,30 @@ def Wiener(T,N,seed):
     return t,W
 if __name__ == '__main__':
 
-    t_rw, dirs,X_rw=randomwalk(.5,.5,1000000)
-    t_rw_scaled=np.array(t_rw)*100
-    makeContinues(t_rw,dirs,10000)
-    # plt.plot(t_cont, X_cont, color="tab:purple", linewidth=1.0, alpha=0.9, label="Interpolated path")
-    #
-    # # overlay discrete points
-    # plt.scatter(t_rw_scaled, X_rw,
-    #             s=30, color="white", edgecolors="black", zorder=3,
-    #             label="Random walk steps")
-    #
-    # # highlight start/end
-    # plt.scatter(t_rw_scaled[0], X_rw[0], c="green", s=80, edgecolors="black", zorder=4, label="Start")
-    # plt.scatter(t_rw_scaled[-1], X_rw[-1], c="red", s=80, edgecolors="black", zorder=4, label="End")
-    # t_wiener,X_wiener=Wiener(1,10000,None)
-    # plt.plot(np.array(t_wiener), X_wiener, color="tab:orange", lw=1.0, alpha=0.8, label="Wiener (Brownian)")
-    #
-    # plt.xlabel("t")
-    # plt.ylabel("X")
-    # plt.title("Random Walk vs Continuous Interpolation (Donsker scaling)")
-    # plt.legend()
-    # plt.grid(True, alpha=0.3)
-    # plt.tight_layout()
-    # plt.show()
+    colors = cm.plasma(np.linspace(0, 1, 5))
+    t_rw, X_rw=randomwalk(.5,.5,100000)
+    print(t_rw)
+    #plt.scatter(t_rw, X_rw, color="tab:purple", linewidth=1.0, alpha=0.9, label="Interpolated path")
+    t_sw,X_sw=ScaledWalk(1,100)
+    colorcoded={1:"red",2:"blue",3:"green",4:"yellow",5:"magenta",6:"cyan"}
+    for i in range(2,7):
+        deg=pow(10,i)
+        t_sw, X_sw = ScaledWalk(1,deg)
+        plt.scatter(t_sw*(1/deg), X_sw, color=colors[i-2],s=5, alpha=0.7)
+    patches = [mpatches.Patch(color=color, label=f"$10^{exp}$")
+               for exp, color in zip(range(2,7), colors)]
+
+    plt.legend(handles=patches,
+               title="n",
+               loc="center left",  # anchor to left side of bbox
+               bbox_to_anchor=(1.02, 0.5))
+
+    plt.xlabel("t ∈ [0,1]")
+    plt.ylabel("S_n value") #TODO
+    plt.title("Scaled Random Walks converging to Brownian Motion", fontsize=14)
+    plt.tight_layout()
+    plt.savefig("scaled_walks.png", dpi=600, bbox_inches="tight")
+    plt.show()
+
+
 
