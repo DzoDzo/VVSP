@@ -12,7 +12,7 @@ from scipy.stats import poisson
 from scipy.stats import norm
 
 
-def randomwalk(p,q,n): # za grfiranje ne 1D talkanje
+def randomwalk(p,q,n): # za grfiranje na 1D talkanje
     dir=[]
     dirs=[-1,1]
     probs=[p,q]
@@ -68,7 +68,7 @@ def Wiener(T,N,seed=None): #za grafiranje na Vinerov vo edna dimenzija
     t=np.linspace(0,T,N+1)
     #print((t),len(W),W)
     return t,W
-def Wiener2D(T, N, seed=None): #za grafiranje na Vinerov vodve dimenzii
+def Wiener2D(T, N, seed=None): #za grafiranje na Vinerov vo dve dimenzii
     if seed is not None:
         np.random.seed(seed)
     dt = T / N
@@ -100,34 +100,30 @@ def hitting_probs(p,a,b): #za presmetuvanje na verojatnost za pogoduvanje b pred
             sum_br+=s_i
         sum_im+=s_i
     return sum_br/sum_im
-def expected_time(p, a, b, start_at=0): #za presmetuvanje na ochekuvanoto vreme do pogoduvanje na barierite -a i b
+def expected_time(p, a, b): #za presmetuvanje na ochekuvanoto vreme do pogoduvanje na barierite -a i b
     N = a + b
-    i = a + start_at  # map start in {-a,...,b} to {0,...,N}
-    if i <= 0 or i >= N:
-        return 0.0  # already at a boundary
-
     if isinstance(p, (int, float)):
         if abs(p - 0.5) < 1e-12:
-            return float(i * (N - i))  # i(N-i)
+            return float(a * (N - a))
         r = (1 - p) / p
-        return (N / (2*p - 1)) * ((r**i - 1) / (r**N - 1)) - i / (2*p - 1)
+        return (N / (2*p - 1)) * ((r**a - 1) / (r**N - 1)) - a / (2*p - 1)
 
     s = [1.0]
-    for k in range(1, N):  # k = 1..N-1
+    for k in range(1, N):
         s.append(s[-1] * (1 - p[k-1]) / p[k-1])
     S = [0.0]
     for k in range(N):
         S.append(S[-1] + s[k])
     A = [0.0]
-    for m in range(1, N):  # m = 1..N-1
+    for m in range(1, N):
         A.append(A[-1] + 1.0 / (p[m-1] * s[m]))
 
-    B = [s[0] * A[0]]  # = 0
+    B = [s[0] * A[0]]
     for m in range(1, N):
         B.append(B[-1] + s[m] * A[m])
 
     v1 = B[N-1] / S[N]
-    return S[i] * v1 - B[i-1]
+    return S[a] * v1 - B[a-1]
 def max_till(listac,till): #pomoshna funkcija
     maxac=listac[0]
     for i in range(till):
