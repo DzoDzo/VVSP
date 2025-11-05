@@ -10,7 +10,9 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from numpy.linalg import eigh
 from scipy.stats import poisson
 from scipy.stats import norm
-
+import math
+import pandas as pd
+import numpy as np
 
 def randomwalk(p,q,n): # za grfiranje na 1D talkanje
     dir=[]
@@ -130,8 +132,42 @@ def max_till(listac,till): #pomoshna funkcija
         if listac[i]>maxac:
             maxac=listac[i]
     return maxac
+def fair_call_price_bs(K,r,T):
+    df = pd.read_csv("synthetic_stock_prices.csv", parse_dates=["Date"])
+    S = float(df["Close"].iloc[-1]) #cena na akcija vo segashnosta, csv sodrzhi prethodnata godina za nekoja akcija
+    logs = np.log(df["Close"]).diff().dropna().to_numpy() # devijacija na logaritmite od odnosite na cena den za den
+    sigma = logs.std(ddof=1) * math.sqrt(252) #252 trading denovi ima
 
+    #r vo Black Scholes ne e procent tuku se presmestevua so ln(1+r)
+    r=math.log(1+r)
+    d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * math.sqrt(T))
+    d2 = d1 - sigma * math.sqrt(T)
+    return S * stats.norm.cdf(d1) - K * math.exp(-r * T) * stats.norm.cdf(d2)
+def fair_call_price_bin(K,r,T,n=1000):
+    df = pd.read_csv("synthetic_stock_prices.csv", parse_dates=["Date"])
+    S = float(df["Close"].iloc[-1])
+    logs = np.log(df["Close"]).diff().dropna().to_numpy()
+    sigma = logs.std(ddof=1) * math.sqrt(252)
 
+    dt=T/n
+    u=math.exp(sigma * math.sqrt(dt))
+    d=1/u
+
+    p=(math.exp(r*dt)-d)/(u-d)
+
+    C=np.zeros(n+1)
+    S_term=S*d**n
+    #Ovde, za podobruvanje na algoritmot, gi chuvame samo terminalnite jazli, kafe idneksot na C, se odnesuva kon kolku pati od N cenata se ima nakacheno
+    #do posledniot moment
+    for i in range(n+1):
+        C[i]=max(S_term-K,0)
+        S_term*=u/d
+
+    #sega odime nanazad
+    for j in range(n-1,-1,-1): #sekoj ciklus ovde se odnesuva na edna iteracija na drvoto nanazad, pr za n-1 bi bilo za jazlite pred terminalnite
+        for i in range(j+1): #seko
+            C[i]=math.exp(-r*dt)* (p * C[i + 1] + (1.0 - p) * C[i])
+    return C[0]
 def Relfection(n,a=1,iters=10000): #za empirisko testiranje na teoremata dobiean od principot na reflekcija
     hits_a,ends_a=0,0
     for _ in range(iters):
@@ -144,8 +180,7 @@ def Relfection(n,a=1,iters=10000): #za empirisko testiranje na teoremata dobiean
     return hits_a/iters,ends_a/iters,float(2 * norm.sf(a / np.sqrt(1)))
 if __name__ == '__main__':
     #testiranje na algoritmi
-    for a in [1,1.5,2,2.5]: #primer vrednosti za a
-        print(Relfection(n=10000,a=a,iters=10000))
+
 
     prob=hitting_probs(0.7,a=5,b=7)
     time=expected_time(0.7,a=5,b=7)
@@ -165,3 +200,18 @@ if __name__ == '__main__':
     prob = hitting_probs(p, 6, 6)
     time = expected_time(p, 6, 6)
     print(prob, time)
+
+    print(fair_call_price_bs(100, 0.03, 3))
+    print(fair_call_price_bs(100, 0.05, 3))
+    print(fair_call_price_bs(100, 0.08, 3))
+    print(fair_call_price_bs(100, 0.12, 3))
+
+    #Ovde interesno e deka donskerovata teorema vazhi, so zgolemuvanje na n ovie vrednosti se doblizhuvat
+
+    print(fair_call_price_bin(100, 0.03, 3))
+    print(fair_call_price_bin(100, 0.05, 3))
+    print(fair_call_price_bin(100, 0.08, 3))
+    print(fair_call_price_bin(100, 0.12, 3))
+
+    for a in [1,1.5,2,2.5]: #primer vrednosti za a
+        print(Relfection(n=10000,a=a,iters=10000))
